@@ -70,8 +70,9 @@ class ApiExternalLogic
         $userName = env('CURLOPT_USER');
         $password = env('CURLOPT_PWD');
         $x_api_key = env('X_API_KEY');
-        $x_token = ApiExternalLogic::GenerarTokenSeguridad();
         $urlbase = env('URL_BASE');
+        $x_token = ApiExternalLogic::GenerarTokenSeguridad();
+
         $result = '';
         $message = '';
         $success = 0;
@@ -84,6 +85,7 @@ class ApiExternalLogic
 
             $links_dropbox = ApiExternalLogic::AssignFilesDropbox($item_id, $final_invoice_documents);
             $dbLink = '';
+            $count_register_success = 0;
 
             foreach ($links_dropbox as $item_url) {
 
@@ -128,7 +130,7 @@ class ApiExternalLogic
                         'notes_title' => $file_name,
                         'filelocationtype' => 'I',
                         'filename' => $cf,
-                        'document_type' => '25670',
+                        'document_type' => '369715',
                         'folderid' => 'T1'
                     ]);
 
@@ -149,8 +151,22 @@ class ApiExternalLogic
                     if (isset($result['status'])) {
                         $status = $result['status'];
                         if ($status === 1) {
+
                             $notesid = $result['result']['id'];
+                            ////validar el response de updateRecordPmc una vez que se sube el archivo al pmc si en caso ocurre un error enviar un correo
                             $response = ApiExternalLogic::updateRecordPmc($notesid, $claimsid);
+
+                            $count_register_success = $count_register_success + 1;
+                            $success = 1;
+                            $message = 'Data  successfully recorded ' . count($links_dropbox) . ' of ' . $count_register_success;
+                        } else {
+                            /// Enviar un correo si ocurre un error
+                            if (isset($result['error'])) {
+                                $message = $result['error']['message'];
+                                $success = 0;
+                                $code = $result['error']['code'];
+                                return [$code, $message, $success];
+                            }
                         }
                     }
                 } catch (\Exception $e) {
@@ -240,8 +256,8 @@ class ApiExternalLogic
             $date_and_time = date("Y-m-d-H:i:s");
             $string_without_space = str_replace(' ', '', $explode_file[0]);
 
-            $new_file_dropbox = ApiExternalLogic::ReadApiDropbox($string_without_space . '_' . $date_and_time, $item_id, $item['file'], $file_extension);
-
+            $new_file_dropbox = ApiExternalLogic::ReadApiDropbox($string_without_space . '_' . $date_and_time, "TestIntegrationExternal" . $item_id, $item['file'], $file_extension);
+            # $new_file_dropbox = ApiExternalLogic::ReadApiDropbox($string_without_space . '_' . $date_and_time, $item_id, $item['file'], $file_extension);
             if (isset($new_file_dropbox['url'])) {
                 $files_dropbox[] = $new_file_dropbox['url'];
             } else if (isset($new_file_dropbox['error'])) {
