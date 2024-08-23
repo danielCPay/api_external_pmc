@@ -26,20 +26,22 @@ class ApiExternalController extends Controller
             $parameter = (array)$request->input();
             $item_id = $parameter['item_id'];
             $type_of_service = $parameter['type_of_service'];
+            $number_claim = $parameter['number_claim'];
 
             $response_api_higgs = ApiExternalLogic::ReadApiHiggsHub($item_id);
+            $response_upload_document = '';
 
-            if (isset($response['error']) && !empty($item_id)) {
-                return ApiResponse::emptydata("Job not found", 500, $response);
-            } else if (!empty($item_id) &&  !empty($type_of_service)) {
+            if (isset($response_api_higgs['error']) && !empty($item_id)) {
+                return ApiResponse::emptydata("Job not found", 500, $response_api_higgs);
+            } else if (!empty($item_id) &&  !empty($type_of_service) && !empty($number_claim)) {
 
-                $response_upload_document = ApiExternalLogic::uploadDocumentPmc($response_api_higgs);
-                var_dump($response_upload_document);
-                $response = ApiExternalLogic::updateRecordPmc($item_id);
+                $claimsid = ApiExternalLogic::ClaimRecordsLists($number_claim);
+
+                $response_upload_document = ApiExternalLogic::uploadDocumentPmc($item_id, $claimsid, $response_api_higgs);
             }
         } catch (\Exception $e) {
             return ApiResponse::error('Error' . $e, 404, $response);
         }
-        return ApiResponse::success("Success", 200, $response, "");
+        return ApiResponse::success("Success", 200, $response_upload_document, "");
     }
 }
